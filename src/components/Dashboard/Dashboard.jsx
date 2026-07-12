@@ -3,52 +3,65 @@ import Header from "../Header/Header";
 import Sidebar from "../Sidebar/Sidebar";
 import EmailList from "../EmailList/EmailList";
 import EmailDetails from "../EmailDetails/EmailDetails";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function Dashboard() {
 
     const [selectedEmail, setSelectedEmail] = useState(null);
 
-    const emails = [
-        {
-            id: 1,
-            subject: "Science Project",
-            from: "teacher@school.org",
-            aiSummary: "Project due Thursday.",
-            body: "Hello class,\n\nThe science project is due Thursday."
-        },
-        {
-            id: 2,
-            subject: "Meeting",
-            from: "alex@gmail.com",
-            aiSummary: "Alex wants to meet Friday."
-        }
-    ];
+    useEffect(() => {
 
-    const summaryData = [
-        {
-            title: "Unread Emails",
-            value: emails.length
-        },
-        {
-            title: "Needs Reply",
-            value: 5
-        },
-        {
-            title: "Categories",
-            value: 4
-        }
-];
+        fetch("http://localhost:5000/api/emails/category/123")
+            .then(response => response.json())
+            .then(data => {
+            setEmails(data);
+        });
+
+    }, []);
+
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+
+        fetch("http://localhost:5000/api/auth/me")
+            .then(response => response.json())
+            .then(data => {
+            setUser(data);
+        });
+
+    }, []);
+
+    const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+
+        fetch("http://localhost:5000/api/categories")
+            .then(response => response.json())
+            .then(data => {
+            setCategories(data);
+        });
+
+    }, []);
+
+    function handleEmailClick(email) {
+
+        fetch(`http://localhost:5000/api/emails/${email.id}/content`)
+            .then(response => response.json())
+            .then(data => {
+            setSelectedEmail(data);
+        });
+
+    }
 
     return (
         <div className="dashboard">
 
             <Header
-                username="Bryson"
-                profilePic="/default-avatar.png"
+                username={user?.username}
+                profilePic={user?.profilePic}
             />
 
-            <Sidebar />
+            <Sidebar categories={categories} />
 
             <EmailDetails email={selectedEmail} />
 
