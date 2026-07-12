@@ -1,14 +1,21 @@
-
-function Sidebar() {
+function Sidebar({ categories, selectedCategory, onSelectCategory }) {
     return (
         <div className="sidebar">
-            <h2>Navigation</h2>
+            <h2>Categories</h2>
             <ul>
-                <li>Home</li>
-                <li>Inbox</li>
-                <li>Starred</li>
-                <li>Sent</li>
-                <li>Trash</li>
+                {categories.length === 0 && <li>No categories yet</li>}
+                {categories.map(cat => (
+                    <li
+                        key={cat._id}
+                        onClick={() => onSelectCategory(cat)}
+                        style={{
+                            cursor: "pointer",
+                            fontWeight: selectedCategory?._id === cat._id ? "bold" : "normal"
+                        }}
+                    >
+                        {cat.name} ({cat.emailCount ?? 0})
+                    </li>
+                ))}
             </ul>
         </div>
     );

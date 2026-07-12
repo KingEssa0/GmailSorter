@@ -1,49 +1,66 @@
 import SummaryCard from "../SummaryCard/SummaryCard";
-import Header from "../Header/Header";
-import Sidebar from "../Sidebar/Sidebar";
+import Header from "../header/header";
+import Sidebar from "../sidebar/sidebar";
 import EmailList from "../EmailList/EmailList";
 import EmailDetails from "../EmailDetails/EmailDetails";
 import { useEffect, useState } from "react";
 
-function Dashboard() {
+const API = "http://localhost:5000";
 
-    const [selectedEmail, setSelectedEmail] = useState(null);
-    const [loading, setLoading] = useState(true);
+function getToken() {
+    return localStorage.getItem("token");
+}
 
-    useEffect(() => {
-        setLoading(true);
-        fetch("http://localhost:5000/api/emails/category/123")
-            .then(response => response.json())
-            .then(data => {
-            setEmails(data);
-            setLoading(false);
-        });
+function authFetch(url) {
+    return fetch(url, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+    });
+}
 
-    }, []);
+function Dashboard({ user }) {
 
-    const [user, setUser] = useState(null);
-
-    useEffect(() => {
-
-        fetch("http://localhost:5000/api/auth/me")
-            .then(response => response.json())
-            .then(data => {
-            setUser(data);
-        });
-
-    }, []);
-
+    const [emails, setEmails] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [selectedEmail, setSelectedEmail] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [loading, setLoading] = useState(false);
 
+    // load categories on mount
     useEffect(() => {
-
-        fetch("http://localhost:5000/api/categories")
-            .then(response => response.json())
+        authFetch(`${API}/api/categories`)
+            .then(res => res.json())
             .then(data => {
-            setCategories(data);
-        });
-
+                if (Array.isArray(data)) {
+                    setCategories(data);
+                    // auto-select first category
+                    if (data.length > 0) setSelectedCategory(data[0]);
+                }
+            });
     }, []);
+
+    // load emails when selected category changes
+    useEffect(() => {
+        if (!selectedCategory) return;
+        setLoading(true);
+        authFetch(`${API}/api/emails/category/${selectedCategory._id}`)
+            .then(res => res.json())
+            .then(data => {
+                setEmails(Array.isArray(data) ? data : []);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, [selectedCategory]);
+
+    function handleEmailClick(email) {
+        authFetch(`${API}/api/emails/${email._id}/content`)
+            .then(res => res.json())
+            .then(data => setSelectedEmail(data));
+    }
+
+    const summaryData = [
+        { title: "Categories", value: categories.length },
+        { title: "Emails", value: emails.length },
+    ];
 
     if (loading) {
         return (
@@ -54,42 +71,36 @@ function Dashboard() {
         );
     }
 
-    function handleEmailClick(email) {
-
-        fetch(`http://localhost:5000/api/emails/${email.id}/content`)
-            .then(response => response.json())
-            .then(data => {
-            setSelectedEmail(data);
-        });
-
-    }
-
     return (
         <div className="dashboard">
 
             <Header
-                username={user?.username}
+                username={user?.name}
                 profilePic={user?.profilePic}
             />
 
-            <Sidebar categories={categories} />
-
-            <EmailDetails email={selectedEmail} />
+            <Sidebar
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+            />
 
             <div className="summarySection">
                 {summaryData.map(card => (
-                <SummaryCard
-                 key={card.title}
-                 title={card.title}
-                 value={card.value}
-                />
-            ))}
-        </div>
+                    <SummaryCard
+                        key={card.title}
+                        title={card.title}
+                        value={card.value}
+                    />
+                ))}
+            </div>
 
             <EmailList
                 emails={emails}
-                onSelectEmail={setSelectedEmail}
+                onSelectEmail={handleEmailClick}
             />
+
+            <EmailDetails email={selectedEmail} />
 
         </div>
     );
