@@ -8,13 +8,15 @@ import { useEffect, useState } from "react";
 function Dashboard() {
 
     const [selectedEmail, setSelectedEmail] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-
+        setLoading(true);
         fetch("http://localhost:5000/api/emails/category/123")
             .then(response => response.json())
             .then(data => {
             setEmails(data);
+            setLoading(false);
         });
 
     }, []);
@@ -42,6 +44,15 @@ function Dashboard() {
         });
 
     }, []);
+
+    if (loading) {
+        return (
+            <div className="loading">
+                <h2>Loading your emails...</h2>
+                <p>Our AI is organizing your inbox</p>
+            </div>
+        );
+    }
 
     function handleEmailClick(email) {
 
