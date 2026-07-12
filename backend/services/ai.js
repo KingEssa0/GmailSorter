@@ -7,7 +7,7 @@ class AIService {
     this.gemini = process.env.GEMINI_API_KEY
       ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
       : null;
-    this.model = "gemini-2.5-flash";
+    this.model = "gemini-2.0-flash-lite";
   }
 
   async categorizeEmail(emailData, categories) {
