@@ -1,0 +1,156 @@
+# GmailSorter API Tests
+# Install the "REST Client" VS Code extension to run these inline.
+#
+# HOW TO USE:
+# 1. Start the server: cd backend && node server.js
+# 2. Run "Health Check" first to confirm the server is up.
+# 3. Open a browser and go to http://localhost:5000/api/auth/google to log in.
+#    Copy the token from the redirect URL: /dashboard?token=<TOKEN>
+# 4. Paste that token into the @token variable below.
+# 5. Run the remaining requests top to bottom.
+# 6. After creating a category, paste the returned _id into @categoryId.
+
+@baseUrl = http://localhost:5000
+@token = PASTE_YOUR_JWT_TOKEN_HERE
+@categoryId = PASTE_CATEGORY_ID_HERE
+@emailId = PASTE_EMAIL_ID_HERE
+@accountId = PASTE_ACCOUNT_ID_HERE
+
+# ─────────────────────────────────────────────
+# 1. HEALTH CHECK
+# ─────────────────────────────────────────────
+
+### Health Check – expect: { "message": "Gmail Sorter API is running!" }
+GET {{baseUrl}}/
+Accept: application/json
+
+# ─────────────────────────────────────────────
+# 2. AUTH
+# ─────────────────────────────────────────────
+
+### Start Google OAuth flow (opens in browser, not runnable here)
+# GET {{baseUrl}}/api/auth/google
+
+### Get current user – requires token
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+Accept: application/json
+
+# ─────────────────────────────────────────────
+# 3. TEST / DIAGNOSTICS
+# ─────────────────────────────────────────────
+
+### Test Gemini AI connection – no auth required
+GET {{baseUrl}}/api/test/gemini
+Accept: application/json
+
+# ─────────────────────────────────────────────
+# 4. CATEGORIES
+# ─────────────────────────────────────────────
+
+### List all categories
+GET {{baseUrl}}/api/categories
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Create a new category
+# Copy the _id from the response and paste it into @categoryId above.
+POST {{baseUrl}}/api/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Newsletters",
+  "description": "Marketing emails and newsletters I subscribed to"
+}
+
+### Delete a category (also deletes its emails)
+# WARNING: this is destructive. Swap in a real ID first.
+DELETE {{baseUrl}}/api/categories/{{categoryId}}
+Authorization: Bearer {{token}}
+
+# ─────────────────────────────────────────────
+# 5. ACCOUNTS
+# ─────────────────────────────────────────────
+
+### List all connected Gmail accounts
+GET {{baseUrl}}/api/accounts
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Start connect-additional-account OAuth flow (browser only)
+# GET {{baseUrl}}/api/accounts/connect?token={{token}}
+
+### Disconnect a secondary account
+# WARNING: deletes all emails for that account. Swap in a real ID first.
+# DELETE {{baseUrl}}/api/accounts/{{accountId}}
+# Authorization: Bearer {{token}}
+
+# ─────────────────────────────────────────────
+# 6. EMAILS
+# ─────────────────────────────────────────────
+
+### Get emails in a category
+GET {{baseUrl}}/api/emails/category/{{categoryId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get full content of a single email
+GET {{baseUrl}}/api/emails/{{emailId}}/content
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get all emails for a specific Gmail account
+GET {{baseUrl}}/api/emails/account/{{accountId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Sync emails (all accounts) – calls Gmail API + Gemini AI
+# This may take 10–30 seconds. Requires at least one category to exist.
+POST {{baseUrl}}/api/emails/sync
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}
+
+### Sync emails for a specific account only
+POST {{baseUrl}}/api/emails/sync
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "accountId": "{{accountId}}"
+}
+
+### Unsubscribe from emails
+# Paste real email _ids from the category listing above.
+POST {{baseUrl}}/api/emails/unsubscribe
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "emailIds": ["{{emailId}}"]
+}
+
+### Bulk delete emails
+# WARNING: permanent. Swap in real email _ids first.
+# DELETE {{baseUrl}}/api/emails/bulk
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+#
+# {
+#   "emailIds": ["{{emailId}}"]
+# }
+
+# ─────────────────────────────────────────────
+# 7. ERROR / AUTH GUARD TESTS
+# ─────────────────────────────────────────────
+
+### Should return 401 – no token provided
+GET {{baseUrl}}/api/categories
+Accept: application/json
+
+### Should return 401 – invalid token
+GET {{baseUrl}}/api/categories
+Authorization: Bearer this.is.not.valid
+Accept: application/json
