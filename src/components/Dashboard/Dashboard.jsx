@@ -1,8 +1,8 @@
-import SummaryCard from "./SummaryCard";
-import Header from "./Header";
-import Sidebar from "./Sidebar";
-import EmailList from "./EmailList";
-import EmailDetails from "./EmailDetails";
+import SummaryCard from "../SummaryCard/SummaryCard";
+import Header from "../Header/Header";
+import Sidebar from "../Sidebar/Sidebar";
+import EmailList from "../EmailList/EmailList";
+import EmailDetails from "../EmailDetails/EmailDetails";
 import { useState } from "react";
 
 function Dashboard() {
