@@ -23,7 +23,7 @@ class GmailService {
 
       const res = await gmail.users.messages.list({
         userId: "me",
-        q: "in:inbox is:unread -label:ai-email-sorter-processed",
+        q: "in:inbox newer_than:7d",
         maxResults,
       });
 

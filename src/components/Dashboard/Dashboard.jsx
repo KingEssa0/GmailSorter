@@ -1,3 +1,4 @@
+import "./Dashboard.css";
 import SummaryCard from "../SummaryCard/SummaryCard";
 import Header from "../header/header";
 import Sidebar from "../sidebar/sidebar";
@@ -11,9 +12,14 @@ function getToken() {
     return localStorage.getItem("token");
 }
 
-function authFetch(url) {
+function authFetch(url, options = {}) {
     return fetch(url, {
-        headers: { Authorization: `Bearer ${getToken()}` }
+        ...options,
+        headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+            ...options.headers,
+        }
     });
 }
 
@@ -24,21 +30,23 @@ function Dashboard({ user }) {
     const [selectedEmail, setSelectedEmail] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [syncMsg, setSyncMsg] = useState("");
+    const [newCatName, setNewCatName] = useState("");
+    const [newCatDesc, setNewCatDesc] = useState("");
+    const [catLoading, setCatLoading] = useState(false);
 
-    // load categories on mount
     useEffect(() => {
         authFetch(`${API}/api/categories`)
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
                     setCategories(data);
-                    // auto-select first category
                     if (data.length > 0) setSelectedCategory(data[0]);
                 }
             });
     }, []);
 
-    // load emails when selected category changes
     useEffect(() => {
         if (!selectedCategory) return;
         setLoading(true);
@@ -57,27 +65,57 @@ function Dashboard({ user }) {
             .then(data => setSelectedEmail(data));
     }
 
+    function handleCreateCategory(e) {
+        e.preventDefault();
+        if (!newCatName.trim() || !newCatDesc.trim()) return;
+        setCatLoading(true);
+        authFetch(`${API}/api/categories`, {
+            method: "POST",
+            body: JSON.stringify({ name: newCatName.trim(), description: newCatDesc.trim() })
+        })
+        .then(res => res.json())
+        .then(cat => {
+            setCategories(prev => [...prev, cat]);
+            setSelectedCategory(cat);
+            setNewCatName("");
+            setNewCatDesc("");
+            setCatLoading(false);
+        })
+        .catch(() => setCatLoading(false));
+    }
+
+    function handleSync() {
+        setSyncing(true);
+        setSyncMsg("");
+        authFetch(`${API}/api/emails/sync`, { method: "POST", body: JSON.stringify({}) })
+            .then(res => res.json())
+            .then(data => {
+                setSyncMsg(data.msg);
+                setSyncing(false);
+                authFetch(`${API}/api/categories`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (Array.isArray(data)) {
+                            setCategories(data);
+                            if (selectedCategory) {
+                                const updated = data.find(c => c._id === selectedCategory._id);
+                                if (updated) setSelectedCategory(updated);
+                            }
+                        }
+                    });
+            })
+            .catch(() => { setSyncMsg("Sync failed"); setSyncing(false); });
+    }
+
     const summaryData = [
         { title: "Categories", value: categories.length },
         { title: "Emails", value: emails.length },
     ];
 
-    if (loading) {
-        return (
-            <div className="loading">
-                <h2>Loading your emails...</h2>
-                <p>Our AI is organizing your inbox</p>
-            </div>
-        );
-    }
-
     return (
         <div className="dashboard">
 
-            <Header
-                username={user?.name}
-                profilePic={user?.profilePic}
-            />
+            <Header username={user?.name} profilePic={user?.profilePic} />
 
             <Sidebar
                 categories={categories}
@@ -85,20 +123,60 @@ function Dashboard({ user }) {
                 onSelectCategory={setSelectedCategory}
             />
 
-            <div className="summarySection">
-                {summaryData.map(card => (
-                    <SummaryCard
-                        key={card.title}
-                        title={card.title}
-                        value={card.value}
-                    />
-                ))}
-            </div>
+            <main className="main-content">
 
-            <EmailList
-                emails={emails}
-                onSelectEmail={handleEmailClick}
-            />
+                <div className="summary-section">
+                    {summaryData.map(card => (
+                        <SummaryCard key={card.title} title={card.title} value={card.value} />
+                    ))}
+                </div>
+
+                <form className="create-category-form" onSubmit={handleCreateCategory}>
+                    <label>
+                        Name
+                        <input
+                            type="text"
+                            placeholder="e.g. Newsletters"
+                            value={newCatName}
+                            onChange={e => setNewCatName(e.target.value)}
+                        />
+                    </label>
+                    <label>
+                        Description
+                        <input
+                            className="wide"
+                            type="text"
+                            placeholder="e.g. Marketing emails and newsletters"
+                            value={newCatDesc}
+                            onChange={e => setNewCatDesc(e.target.value)}
+                        />
+                    </label>
+                    <button className="btn btn-primary" type="submit" disabled={catLoading}>
+                        {catLoading ? "Creating..." : "Add Category"}
+                    </button>
+                </form>
+
+                <div className="sync-bar">
+                    <button className="btn btn-secondary" onClick={handleSync} disabled={syncing}>
+                        {syncing ? "Syncing..." : "Sync Emails"}
+                    </button>
+                    {syncMsg && <span className="sync-msg">{syncMsg}</span>}
+                </div>
+
+                {loading ? (
+                    <div className="loading-state">
+                        <h3>Loading emails...</h3>
+                    </div>
+                ) : categories.length === 0 ? (
+                    <div className="empty-state">
+                        <h3>No categories yet</h3>
+                        <p>Create a category above, then sync your emails.</p>
+                    </div>
+                ) : (
+                    <EmailList emails={emails} onSelectEmail={handleEmailClick} />
+                )}
+
+            </main>
 
             <EmailDetails email={selectedEmail} />
 

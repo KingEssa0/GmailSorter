@@ -1,57 +1,64 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Groq = require("groq-sdk");
 const cheerio = require("cheerio");
 require("dotenv").config();
 
+const MODEL = "llama-3.1-8b-instant";
+
+function getClient() {
+  if (!process.env.GROQ_API_KEY) return null;
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
+
+async function callGroq(prompt) {
+  const client = getClient();
+  if (!client) throw new Error("No GROQ_API_KEY set");
+
+  const completion = await client.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    max_tokens: 200,
+  });
+
+  return completion.choices[0]?.message?.content || "";
+}
+
 class AIService {
-  constructor() {
-    this.gemini = process.env.GEMINI_API_KEY
-      ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-      : null;
-    this.model = "gemini-2.0-flash-lite";
-  }
-
   async categorizeEmail(emailData, categories) {
-    if (!this.gemini) return null;
-
-    const model = this.gemini.getGenerativeModel({ model: this.model });
+    if (!process.env.GROQ_API_KEY) return null;
 
     const categoryList = categories.map(c => `${c.name}: ${c.description}`).join("\n");
 
-    const prompt = `Which of these categories best fits this email? Respond with only the category name.
+    const prompt = `Which of these categories best fits this email? Respond with only the category name, nothing else.
 
 Email Subject: ${emailData.subject}
 From: ${emailData.from}
-Body: ${emailData.body.substring(0, 1000)}
+Body: ${(emailData.body || "").substring(0, 1000)}
 
 Categories:
 ${categoryList}`;
 
     try {
-      const result = await model.generateContent(prompt);
-      const name = result.response.text().trim();
-      return categories.find(c => c.name.toLowerCase() === name.toLowerCase()) || null;
+      const name = (await callGroq(prompt)).trim();
+      return categories.find(c => c.name.toLowerCase() === name.toLowerCase())
+        || categories.find(c => name.toLowerCase().includes(c.name.toLowerCase()))
+        || categories.find(c => c.name.toLowerCase().includes(name.toLowerCase()))
+        || null;
     } catch (err) {
-      console.error("categorize error:", err);
+      console.error("categorize error:", err.message);
       return null;
     }
   }
 
   async summarizeEmail(emailData) {
-    if (!this.gemini) return "AI service unavailable";
+    if (!process.env.GROQ_API_KEY) return "AI service unavailable";
 
-    let body = emailData.body;
-
-    // strip html if needed
+    let body = emailData.body || "";
     if (body.includes("<")) {
       try {
         const $ = cheerio.load(body);
         body = $.text();
-      } catch (e) {
-        console.error("cheerio error:", e);
-      }
+      } catch (e) {}
     }
-
-    const model = this.gemini.getGenerativeModel({ model: this.model });
 
     const prompt = `Summarize this email in 1-2 sentences. Focus on what action is needed or what the main point is.
 
@@ -60,10 +67,9 @@ From: ${emailData.from}
 Body: ${body.substring(0, 2000)}`;
 
     try {
-      const result = await model.generateContent(prompt);
-      return result.response.text().trim();
+      return (await callGroq(prompt)).trim();
     } catch (err) {
-      console.error("summarize error:", err);
+      console.error("summarize error:", err.message);
       return "Summary unavailable";
     }
   }
@@ -72,7 +78,6 @@ Body: ${body.substring(0, 2000)}`;
     if (!body) return null;
 
     try {
-      // try html parsing first
       if (body.includes("<")) {
         try {
           const $ = cheerio.load(body);
@@ -98,7 +103,6 @@ Body: ${body.substring(0, 2000)}`;
         } catch (e) {}
       }
 
-      // fallback to regex
       const patterns = [
         /https?:\/\/[^\s<>"'\)]+unsubscribe[^\s<>"'\)]*/gi,
         /https?:\/\/[^\s<>"'\)]+opt[_-]?out[^\s<>"'\)]*/gi,
@@ -119,12 +123,12 @@ Body: ${body.substring(0, 2000)}`;
   }
 
   async testConnection() {
-    if (!this.gemini) return { success: false, error: "Gemini not initialized - check GEMINI_API_KEY" };
-
+    if (!process.env.GROQ_API_KEY) {
+      return { success: false, error: "No GROQ_API_KEY set" };
+    }
     try {
-      const model = this.gemini.getGenerativeModel({ model: this.model });
-      const result = await model.generateContent("Say hello");
-      return { success: true, response: result.response.text().trim() };
+      const text = await callGroq("Say hello in one word");
+      return { success: true, response: text.trim() };
     } catch (err) {
       return { success: false, error: err.message };
     }

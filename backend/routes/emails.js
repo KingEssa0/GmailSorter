@@ -30,6 +30,7 @@ router.get("/:emailId/content", auth, async (req, res) => {
       subject: email.subject,
       from: email.from,
       receivedDate: email.receivedDate,
+      aiSummary: email.aiSummary,
     });
   } catch (err) {
     res.status(500).json({ msg: "Server error" });

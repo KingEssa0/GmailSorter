@@ -1,23 +1,25 @@
+import "./sidebar.css";
+
 function Sidebar({ categories, selectedCategory, onSelectCategory }) {
     return (
-        <div className="sidebar">
-            <h2>Categories</h2>
+        <aside className="sidebar">
+            <p className="sidebar-title">Categories</p>
             <ul>
-                {categories.length === 0 && <li>No categories yet</li>}
+                {categories.length === 0 && (
+                    <p className="sidebar-empty">No categories yet</p>
+                )}
                 {categories.map(cat => (
                     <li
                         key={cat._id}
+                        className={`sidebar-item ${selectedCategory?._id === cat._id ? "active" : ""}`}
                         onClick={() => onSelectCategory(cat)}
-                        style={{
-                            cursor: "pointer",
-                            fontWeight: selectedCategory?._id === cat._id ? "bold" : "normal"
-                        }}
                     >
-                        {cat.name} ({cat.emailCount ?? 0})
+                        <span>{cat.name}</span>
+                        <span className="count">{cat.emailCount ?? 0}</span>
                     </li>
                 ))}
             </ul>
-        </div>
+        </aside>
     );
 }
 

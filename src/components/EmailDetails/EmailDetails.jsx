@@ -1,39 +1,56 @@
+import "./EmailDetails.css";
+
 function EmailDetails({ email }) {
 
     if (!email) {
         return (
-            <div className="emailDetails">
-                <h2>Select an email</h2>
-                <p>Click an email to view it.</p>
+            <div className="email-details">
+                <div className="email-details-empty">
+                    <h3>Select an email</h3>
+                    <p>Click any email to read it here</p>
+                </div>
             </div>
         );
     }
 
+    const body = email.content || email.body || "";
+    const isHtml = body.trim().startsWith("<") || body.includes("<html") || body.includes("<div");
+
     return (
-        <div className="emailDetails">
+        <div className="email-details">
 
-            <p>
-                <strong>Received:</strong>{" "}
-                {new Date(email.receivedDate).toLocaleString()}
-            </p>
+            <div className="email-details-meta">
+                <h2 className="email-details-subject">{email.subject}</h2>
+                <p className="email-details-from">{email.from}</p>
+                {email.receivedDate && (
+                    <p className="email-details-date">
+                        {new Date(email.receivedDate).toLocaleString("en-US", {
+                            month: "long", day: "numeric", year: "numeric",
+                            hour: "2-digit", minute: "2-digit"
+                        })}
+                    </p>
+                )}
+            </div>
 
-            <h2>{email.subject}</h2>
+            {email.aiSummary && (
+                <div className="email-details-summary">
+                    <p className="email-details-summary-label">Summary</p>
+                    <p>{email.aiSummary}</p>
+                </div>
+            )}
 
-            <p>
-                <strong>From:</strong> {email.from}
-            </p>
+            <hr className="email-details-divider" />
 
-            <p>
-                <strong>AI Summary:</strong>
-            </p>
-
-            <p>{email.aiSummary}</p>
-
-            <hr />
-
-            <h3>Email</h3>
-
-            <p className="emailBody">{email.body}</p>
+            {isHtml ? (
+                <iframe
+                    className="email-details-iframe"
+                    srcDoc={body}
+                    sandbox="allow-same-origin"
+                    title="Email content"
+                />
+            ) : (
+                <p className="email-details-body">{body}</p>
+            )}
 
         </div>
     );
