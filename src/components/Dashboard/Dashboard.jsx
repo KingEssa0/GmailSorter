@@ -1,7 +1,7 @@
 import "./Dashboard.css";
 import SummaryCard from "../SummaryCard/SummaryCard";
-import Header from "../header/header";
-import Sidebar from "../sidebar/sidebar";
+import Header from "../Header/Header";
+import Sidebar from "../Sidebar/Sidebar";
 import EmailList from "../EmailList/EmailList";
 import EmailDetails from "../EmailDetails/EmailDetails";
 import { useEffect, useState } from "react";
