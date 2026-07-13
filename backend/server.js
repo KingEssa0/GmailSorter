@@ -6,13 +6,24 @@ const queueService = require("./services/queue");
 
 dotenv.config();
 
-async function main() {
-  await connectDB();
-
+function createApp() {
   const app = express();
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ].filter(Boolean);
 
   app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }));
   app.use(express.json());
@@ -28,6 +39,14 @@ async function main() {
     res.json({ message: "Gmail Sorter API is running!" });
   });
 
+  return app;
+}
+
+async function main() {
+  await connectDB();
+
+  const app = createApp();
+
   // try to start the queue, but if redis isnt running just skip it
   try {
     await queueService.scheduleAutoSync();
@@ -40,9 +59,15 @@ async function main() {
   app.listen(PORT, () => {
     console.log(`server on port ${PORT}`);
   });
+
+  return app;
 }
 
-main().catch(err => {
-  console.error("startup failed:", err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(err => {
+    console.error("startup failed:", err);
+    process.exit(1);
+  });
+}
+
+module.exports = { createApp, main };

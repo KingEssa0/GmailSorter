@@ -67,7 +67,7 @@ router.post("/sync", auth, async (req, res) => {
       try {
         let newEmails = [];
         try {
-          newEmails = await gmailService.getNewEmails(account, 20);
+          newEmails = await gmailService.getNewEmails(account, 10);
         } catch (gmailErr) {
           errors.push({
             account: account.email,
@@ -91,15 +91,13 @@ router.post("/sync", auth, async (req, res) => {
             if (already) continue;
 
             let category;
-            try {
-              category = await aiService.categorizeEmail(emailData, categories);
-            } catch (e) {}
-            if (!category) category = categories[0];
-
             let summary = "Summary not available";
             try {
-              summary = await aiService.summarizeEmail(emailData);
+              const result = await aiService.processEmail(emailData, categories);
+              category = result.category;
+              summary = result.summary;
             } catch (e) {}
+            if (!category) category = categories[0];
 
             let unsubscribeLink = null;
             try {

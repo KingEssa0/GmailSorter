@@ -84,13 +84,29 @@ function Dashboard({ user }) {
         .catch(() => setCatLoading(false));
     }
 
+    function handleDeleteCategory(catId) {
+        authFetch(`${API}/api/categories/${catId}`, { method: "DELETE" })
+            .then(res => res.json())
+            .then(() => {
+                setCategories(prev => prev.filter(c => c._id !== catId));
+                if (selectedCategory?._id === catId) {
+                    const remaining = categories.filter(c => c._id !== catId);
+                    setSelectedCategory(remaining.length > 0 ? remaining[0] : null);
+                    setEmails([]);
+                }
+            });
+    }
+
     function handleSync() {
         setSyncing(true);
         setSyncMsg("");
         authFetch(`${API}/api/emails/sync`, { method: "POST", body: JSON.stringify({}) })
-            .then(res => res.json())
-            .then(data => {
-                setSyncMsg(data.msg);
+            .then(async res => {
+                const data = await res.json().catch(() => null);
+                if (!res.ok) {
+                    throw new Error(data?.msg || `Sync failed (${res.status})`);
+                }
+                setSyncMsg(data?.msg || "Sync completed");
                 setSyncing(false);
                 authFetch(`${API}/api/categories`)
                     .then(r => r.json())
@@ -104,7 +120,7 @@ function Dashboard({ user }) {
                         }
                     });
             })
-            .catch(() => { setSyncMsg("Sync failed"); setSyncing(false); });
+            .catch(err => { setSyncMsg(err.message || "Sync failed"); setSyncing(false); });
     }
 
     const summaryData = [
@@ -121,6 +137,7 @@ function Dashboard({ user }) {
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
+                onDeleteCategory={handleDeleteCategory}
             />
 
             <main className="main-content">

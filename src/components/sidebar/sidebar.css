@@ -64,6 +64,34 @@
   border-color: var(--accent);
 }
 
+.sidebar-item-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.delete-cat-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.1s, background 0.1s;
+}
+
+.delete-cat-btn:hover {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.sidebar-item:hover .delete-cat-btn {
+  display: block;
+}
+
 .sidebar-empty {
   padding: 10px 14px;
   font-size: 13px;

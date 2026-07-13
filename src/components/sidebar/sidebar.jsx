@@ -1,6 +1,6 @@
 import "./sidebar.css";
 
-function Sidebar({ categories, selectedCategory, onSelectCategory }) {
+function Sidebar({ categories, selectedCategory, onSelectCategory, onDeleteCategory }) {
     return (
         <aside className="sidebar">
             <p className="sidebar-title">Categories</p>
@@ -15,7 +15,19 @@ function Sidebar({ categories, selectedCategory, onSelectCategory }) {
                         onClick={() => onSelectCategory(cat)}
                     >
                         <span>{cat.name}</span>
-                        <span className="count">{cat.emailCount ?? 0}</span>
+                        <div className="sidebar-item-right">
+                            <span className="count">{cat.emailCount ?? 0}</span>
+                            <button
+                                className="delete-cat-btn"
+                                title="Delete category"
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    if (confirm(`Delete "${cat.name}" and all its emails?`)) {
+                                        onDeleteCategory(cat._id);
+                                    }
+                                }}
+                            >✕</button>
+                        </div>
                     </li>
                 ))}
             </ul>
